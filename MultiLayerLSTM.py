@@ -1,5 +1,6 @@
 import torch.nn as nn
 from LSTMCell import LSTMCell
+from BinaryLSTMCell import BinaryLSTMCell
 
 class MultiLayerLSTM(nn.Module):
     # Multilyaer LSTM is just the stacking of NaiveLSTM. 可以做并行计算，但是我这里还是一层一层算吧
@@ -7,9 +8,9 @@ class MultiLayerLSTM(nn.Module):
         super(MultiLayerLSTM, self).__init__()
         self.num_layers = num_layers
         self.LSTMs = nn.ModuleList()
-        self.LSTMs.append(LSTMCell(input_size, hidden_size, batch_first=batch_first))
+        self.LSTMs.append(BinaryLSTMCell(input_size, hidden_size, batch_first=batch_first))
         for i in range(num_layers - 1):
-            self.LSTMs.append(LSTMCell(hidden_size, hidden_size, batch_first=batch_first))
+            self.LSTMs.append(BinaryLSTMCell(hidden_size, hidden_size, batch_first=batch_first))
 
     def forward(self, x, state):
         (h0s, c0s) = state

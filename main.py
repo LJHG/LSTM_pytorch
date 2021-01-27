@@ -12,7 +12,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 sequence_length = 28
 input_size = 28
 hidden_size = 128
-num_layers = 2
+num_layers = 1
 num_classes = 10
 batch_size = 100
 num_epochs = 2
@@ -45,7 +45,7 @@ class RNN(nn.Module):
         self.hidden_size = hidden_size
         self.num_layers = num_layers
         self.lstm = MultiLayerLSTM(input_size, hidden_size, num_layers, batch_first=True)  # batch_first 为 True则输入输出的数据格式为 (batch, seq, feature)
-        # self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        #self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
         self.fc = nn.Linear(hidden_size, num_classes)
 
     def forward(self, x):

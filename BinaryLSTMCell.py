@@ -4,15 +4,16 @@ from torch import Tensor
 from torch.nn import Parameter
 import math
 import torch.nn.init as init
+from utils import getLL1Mean
 import time
 
 
-class LSTMCell(nn.Module):
+class BinaryLSTMCell(nn.Module):
     '''
         LSTM cell
     '''
     def __init__(self, input_size, hidden_size,batch_first=True):
-        super(LSTMCell, self).__init__()
+        super(BinaryLSTMCell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.batch_first = batch_first
@@ -75,31 +76,87 @@ class LSTMCell(nn.Module):
         hidden_seq = []
 
         # seq_size = 28
+
         for t in range(seq_size):
-            start = time.time()
             x = inputs[:, t, :]
 
             # input gate
-            i = torch.sigmoid(x @ self.w_ii.t() + self.b_ii.t() + h @ self.w_hi.t() +
-                              self.b_hi.t())
+            # calculate alpha
+            # print("size of x",x.shape)
+            # print("size of w_ii",self.w_ii.shape)
+            # 这里的w_ii是 128*28,在求a和B时，我们把它看作是向量，1*(128*28)
+
+            alpha_wii = getLL1Mean(self.w_ii)
+            binary_wii = torch.sign(self.w_ii)
+
+            alpha_bii = getLL1Mean(self.b_ii)
+            binary_bii = torch.sign(self.b_ii)
+
+            alpha_whi = getLL1Mean(self.w_hi)
+            binary_whi = torch.sign(self.w_hi)
+
+            alpha_bhi = getLL1Mean(self.b_hi)
+            binary_bhi = torch.sign(self.b_hi)
+
+
+            i = torch.sigmoid(x @ binary_wii.t()*alpha_wii + binary_bii.t()*alpha_bii
+                              + h @ binary_whi.t()*alpha_whi + binary_bhi.t()*alpha_bhi)
 
             # forget gate
-            f = torch.sigmoid(x @ self.w_if.t() + self.b_if.t() + h @ self.w_hf.t() +
-                              self.b_hf.t())
+
+            alpha_wif = getLL1Mean(self.w_if)
+            binary_wif = torch.sign(self.w_if)
+
+            alpha_bif = getLL1Mean(self.b_if)
+            binary_bif = torch.sign(self.b_if)
+
+            alpha_whf = getLL1Mean(self.w_hf)
+            binary_whf = torch.sign(self.w_hf)
+
+            alpha_bhf = getLL1Mean(self.b_hf)
+            binary_bhf = torch.sign(self.b_hf)
+
+
+            f = torch.sigmoid(x @ binary_wif.t()*alpha_wif + binary_bif.t() * alpha_bif
+                              + h @ binary_whf.t()*alpha_whf + binary_bhf.t()*alpha_bhf)
 
             # cell
-            g = torch.tanh(x @ self.w_ig.t() + self.b_ig.t() + h @ self.w_hg.t()
-                           + self.b_hg.t())
+
+            alpha_wig = getLL1Mean(self.w_ig)
+            binary_wig = torch.sign(self.w_ig)
+
+            alpha_big = getLL1Mean(self.b_ig)
+            binary_big = torch.sign(self.b_ig)
+
+            alpha_whg = getLL1Mean(self.w_hg)
+            binary_whg = torch.sign(self.w_hg)
+
+            alpha_bhg = getLL1Mean(self.b_hg)
+            binary_bhg = torch.sign(self.b_hg)
+
+            g = torch.tanh(x @ binary_wig.t()*alpha_wig + binary_big.t()*alpha_big
+                           + h @ binary_whg.t()*alpha_whg + binary_bhg.t()*alpha_bhg)
             # output gate
-            o = torch.sigmoid(x @ self.w_io.t() + self.b_io.t() + h @ self.w_ho.t() +
-                              self.b_ho.t())
+
+            alpha_wio = getLL1Mean(self.w_io)
+            binary_wio = torch.sign(self.w_io)
+
+            alpha_bio = getLL1Mean(self.b_io)
+            binary_bio = torch.sign(self.b_io)
+
+            alpha_who = getLL1Mean(self.w_ho)
+            binary_who = torch.sign(self.w_ho)
+
+            alpha_bho = getLL1Mean(self.b_ho)
+            binary_bho = torch.sign(self.b_ho)
+
+            o = torch.sigmoid(x @ binary_wio.t()*alpha_wio + binary_bio.t()*alpha_bio
+                              + h @ binary_who.t()*alpha_who+binary_bho.t()*alpha_bho)
 
             c_next = f * c + i * g
             h_next = o * torch.tanh(c_next)
             c = c_next
             h = h_next
             hidden_seq.append(h)
-            end = time.time()
-            print(end-start)
         hidden_seq = torch.cat(hidden_seq, dim=2).reshape(batch_size, seq_size, self.hidden_size)
         return hidden_seq, (h, c)
